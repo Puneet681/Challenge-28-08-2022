@@ -21,18 +21,15 @@ from flask import Flask, render_template, request,jsonify
 from flask_cors import CORS,cross_origin
 from urllib.request import urlopen as uReq
 
+
 ACCESS_KEY = 'AKIA4P3NQPUVIDVZVBXJ'
 SECRET_KEY = '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'
-DEVELOPER_KEY = "AIzaSyCG0E7FgtejcTEaVkVtub3hKOu-EF5TB_I"
-SQL_PASSWORD = '1234567890'
-MONGODB_PASSWORD = 'Puneet123'
-
 
 if not os.path.exists(r"./video"):
     os.makedirs(r"./video")
 
 #for SQL querry
-def run_query(query, database=None, host="localhost", user="root", password=SQL_PASSWORD):
+def run_query(query, database=None, host="localhost", user="root", password="Meena@123"):
     try:
         if database is None:
             # logger.info("Connecting to MySQL")
@@ -78,6 +75,7 @@ api_service_name = "youtube"
 api_version = "v3"
 
 def Get_Comments_By_V_ID(videoId=str,max_results=10):
+    DEVELOPER_KEY = "AIzaSyCG0E7FgtejcTEaVkVtub3hKOu-EF5TB_I"
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, developerKey = DEVELOPER_KEY)
     request = youtube.commentThreads().list(
@@ -96,6 +94,7 @@ def Get_Comments_By_V_ID(videoId=str,max_results=10):
 
 
 def Get_Line_By_V_ID(videoId=str):
+    DEVELOPER_KEY = "AIzaSyCG0E7FgtejcTEaVkVtub3hKOu-EF5TB_I"
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, developerKey = DEVELOPER_KEY)
     request = youtube.videos().list(
@@ -154,7 +153,7 @@ def Search(input_url,V_Count):
         Search_Results[bag]['views']=Views
 
 # From YouTube API
-        comments=Get_Comments_By_V_ID(V_ID,max_results=10)
+        comments=Get_Comments_By_V_ID(V_ID,max_results=3)
         for j in range(len(comments)):
             Commenter_Name=comments[j]['commenter_name']
             Comment=comments[j]['Comment']
@@ -166,20 +165,20 @@ def Search(input_url,V_Count):
 def loding_in_SQL(SQL_data):
     a=[]
     #to creat table
-    run_query("CREATE TABLE IF NOT EXISTS data_table(V_ID VARCHAR(15),Ch_Name VARCHAR(100),V_Title VARCHAR(150),Comments_count INT(20),likes INT(20),views INT)",database='video_details',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
+    run_query("CREATE TABLE IF NOT EXISTS data_table(V_ID VARCHAR(15),Ch_Name VARCHAR(100),V_Title VARCHAR(150),Comments_count INT(20),likes INT(20),views INT)",database='video_details',password='1234567890',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
     for i in range(len(SQL_data)):
-        run_query("INSERT INTO data_table(V_ID, Ch_Name, V_Title, Comments_count, likes, views) SELECT * FROM (SELECT '{a}', '{b}','{c}', '{d}', '{e}', '{f}') as temp WHERE NOT EXISTS (SELECT V_ID FROM data_table WHERE V_ID = '{a}') LIMIT 1".format(a=SQL_data[i]['V_ID'],b=SQL_data[i]['Ch_Name'],c=SQL_data[i]['V_Title'],d=int(SQL_data[i]['Comments_count']),e=int(SQL_data[i]['likes']),f=int(SQL_data[i]['views'])),database='video_details',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
+        run_query("INSERT INTO data_table(V_ID, Ch_Name, V_Title, Comments_count, likes, views) SELECT * FROM (SELECT '{a}', '{b}','{c}', '{d}', '{e}', '{f}') as temp WHERE NOT EXISTS (SELECT V_ID FROM data_table WHERE V_ID = '{a}') LIMIT 1".format(a=SQL_data[i]['V_ID'],b=SQL_data[i]['Ch_Name'],c=SQL_data[i]['V_Title'],d=int(SQL_data[i]['Comments_count']),e=int(SQL_data[i]['likes']),f=int(SQL_data[i]['views'])),database='video_details',password='1234567890',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
         a.append(SQL_data[i]['V_ID'])
     b=tuple(a)
     return b
 
 def loding_data_from_SQL(V_IDs=tuple):
-    return run_query("select distinct * from data_table where V_ID in {}".format(V_IDs),database='video_details',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
+    return run_query("select distinct * from data_table where V_ID in {}".format(V_IDs),database='video_details',password='1234567890',host='database-1.cpgxrm6nn8ws.ap-south-1.rds.amazonaws.com',user="admin")
 
 def downloade_yt_video(v_id,downloade_path):
     yt = YouTube("https://www.youtube.com/watch?v="+v_id)
     try:
-        video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').asc().first().download(output_path=downloade_path,filename=v_id+".mp4")
+        yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').asc().first().download(output_path=downloade_path,filename=v_id+".mp4")
         return True
     except :
         print("video is in live strean")
@@ -209,18 +208,17 @@ def upload_to_aws(local_file, bucket, s3_file):
 def downloade_video_and_upload_to_s3(vid,local_folder,bucket):
     status = downloade_yt_video(vid,local_folder)
     if status:
-        s3_url = upload_to_aws('{}/{}.mp4'.format(local_folder,vid), 'aws-data-sanjiv', '{}.mp4'.format(vid))
+        s3_url = upload_to_aws('{}/{}.mp4'.format(local_folder,vid), bucket, '{}.mp4'.format(vid))
     else:
         s3_url = "Video is Streaming Live cannot download."
     delete_yt_video_from_local(vid,local_folder)
     return s3_url
 
 def mongo_connection():
-    client = pymongo.MongoClient("mongodb+srv://Puneet681:{}@challenge28082022.sxuqacj.mongodb.net/test".format(MONGODB_PASSWORD))
+    client = pymongo.MongoClient("mongodb+srv://Puneet681:Puneet123@challenge28082022.sxuqacj.mongodb.net/test")
     db = client.test
     database=client['video_ditails']
     collection = database['data_table']
-    client.close()
     return collection
 
 def loding_in_Mongo(Mongo_Data=list):
@@ -250,8 +248,6 @@ def s3_urls(V_IDs=list) :
 
 
 
-
-
 app = Flask(__name__)
 
 @app.route('/',methods=['GET'])  # route to display the home page
@@ -267,20 +263,18 @@ def index():
             searchString = request.form['content'].replace(" ","")
             print("*****************code running*****************")
             SQL1,Mongo1=Search(searchString,3)
-            print('lodinf into sql')
             V_IDs=loding_in_SQL(SQL_data=SQL1)
             # DO NOT DELETE THIS SECTION
             ######################################
             # s3_url_dict=s3_urls(V_IDs)
             # for i in range(len(Mongo1)):
             #     Mongo1[i]['s3_URL']=s3_url_dict[Mongo1[i]['V_ID']]
-            print('lodind into mongo')
             loding_in_Mongo(Mongo1)
             Mongo_df=pd.DataFrame(data_from_mongo(V_IDs))
             SQL_df=pd.DataFrame(loding_data_from_SQL(V_IDs=V_IDs),columns=['V_ID','Ch_Name','V_Title','Comments_count','likes','views'])
             Mongo_df.drop('_id',inplace=True,axis=1)
-            print('merge df')
             final_data = pd.merge(SQL_df,Mongo_df ,on='V_ID', how='inner')
+            # final_data.to_json(orient="records")
             print("*****************code endded*****************")
             return render_template('results.html', final_data=final_data.T.to_dict().values())
         except Exception as e:
