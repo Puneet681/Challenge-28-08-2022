@@ -140,7 +140,7 @@ def Search(input_url,V_Count):
         Search_Results[bag]['views']=Views
 
 # From YouTube API
-        comments=Get_Comments_By_V_ID(V_ID,max_results=10)
+        comments=Get_Comments_By_V_ID(V_ID,max_results=30)
         for j in range(len(comments)):
             Commenter_Name=comments[j]['commenter_name']
             Comment=comments[j]['Comment']
@@ -250,7 +250,7 @@ def index():
             searchString = request.form['content'].replace(" ","")
             print("*****************code running*****************")
             try:
-                SQL1,Mongo1=Search(searchString,3)
+                SQL1,Mongo1=Search(searchString,10)
             except Exception:
                 return "Enter Correct URL"
             print("*****************Loading into SQL*****************")
